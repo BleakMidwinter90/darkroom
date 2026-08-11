@@ -4,7 +4,9 @@ import {
   acceptAttribute,
   dropPrompt,
   findTask,
+  hashForTask,
   TASKS,
+  taskFromHash,
   tasksIn,
   type Task,
 } from '../src/lib/tasks';
@@ -115,5 +117,37 @@ describe('dropPrompt', () => {
 
   it('falls back to something sensible with no task', () => {
     expect(dropPrompt(undefined).length).toBeGreaterThan(0);
+  });
+});
+
+describe('taskFromHash', () => {
+  it('reads a task from a fragment', () => {
+    expect(taskFromHash('#merge')?.id).toBe('merge');
+  });
+
+  it('tolerates the forms a URL actually arrives in', () => {
+    expect(taskFromHash('merge')?.id).toBe('merge');
+    expect(taskFromHash('#/merge')?.id).toBe('merge');
+    expect(taskFromHash('#MERGE')?.id).toBe('merge');
+    expect(taskFromHash('  #merge  '.trim())?.id).toBe('merge');
+  });
+
+  it('treats an empty or unknown fragment as no task', () => {
+    // A stale bookmark should open the list, not an error.
+    expect(taskFromHash('')).toBeUndefined();
+    expect(taskFromHash('#')).toBeUndefined();
+    expect(taskFromHash('#not-a-tool')).toBeUndefined();
+  });
+
+  it('round-trips with hashForTask for every task', () => {
+    for (const task of TASKS) {
+      expect(taskFromHash(hashForTask(task.id))?.id).toBe(task.id);
+    }
+  });
+});
+
+describe('hashForTask', () => {
+  it('clears the fragment when nothing is chosen', () => {
+    expect(hashForTask(null)).toBe('');
   });
 });

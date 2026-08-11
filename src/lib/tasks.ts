@@ -139,6 +139,29 @@ export function findTask(id: TaskId): Task | undefined {
   return TASKS.find((task) => task.id === id);
 }
 
+/**
+ * Read a task out of a URL fragment.
+ *
+ * Giving each job an address is worth more here than it looks: it makes tools
+ * linkable and bookmarkable ("the one that strips GPS" is a URL you can send
+ * someone), and it means the browser's back button returns to the list instead
+ * of leaving the app entirely — which is what it would otherwise do, since
+ * choosing a job is a navigation as far as anyone using it is concerned.
+ *
+ * Anything unrecognised is simply no task, so a stale or hand-edited link opens
+ * the list rather than an error.
+ */
+export function taskFromHash(hash: string): Task | undefined {
+  const id = hash.replace(/^#\/?/, '').trim().toLowerCase();
+  if (!id) return undefined;
+  return TASKS.find((task) => task.id === id);
+}
+
+/** The fragment for a task, including the `#`. */
+export function hashForTask(id: TaskId | null): string {
+  return id ? `#${id}` : '';
+}
+
 export function tasksIn(group: Task['group']): Task[] {
   return TASKS.filter((task) => task.group === group);
 }
