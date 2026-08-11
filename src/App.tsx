@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CombinePdf } from './components/CombinePdf';
-import { Controls, type Settings } from './components/Controls';
+import { Controls } from './components/Controls';
 import { DropZone } from './components/DropZone';
 import { FileRow } from './components/FileRow';
 import { PdfPanel, type PdfEntry } from './components/PdfPanel';
+import { TaskPicker } from './components/TaskPicker';
 import { formatBytes, plural } from './lib/format';
 import { readMetadata } from './lib/metadata';
 import type { OutputFormat } from './lib/naming';
 import { deduplicateNames } from './lib/naming';
 import { isPdf, readPdf } from './lib/pdf';
 import { processFile, supportedFormats } from './lib/pipeline';
+import { DEFAULT_SETTINGS, type Settings } from './lib/settings';
+import {
+  acceptAttribute,
+  dropPrompt,
+  findTask,
+  hashForTask,
+  taskFromHash,
+  type TaskId,
+} from './lib/tasks';
 import {
   CONCURRENCY,
   itemId,
@@ -20,18 +30,18 @@ import {
   type QueueItem,
 } from './lib/queue';
 
-const DEFAULT_SETTINGS: Settings = {
-  format: 'jpeg',
-  quality: 0.8,
-  resize: { kind: 'none' },
-};
-
 export default function App() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [formats, setFormats] = useState<OutputFormat[]>(['jpeg', 'png']);
   const [pdfs, setPdfs] = useState<PdfEntry[]>([]);
   const [busy, setBusy] = useState(false);
+  // Seeded from the URL so a link to a tool opens that tool.
+  const [chosen, setChosen] = useState<TaskId | null>(
+    () => taskFromHash(window.location.hash)?.id ?? null,
+  );
+
+  const task = chosen ? findTask(chosen) : undefined;
 
   // Held in a ref as well as state so cleanup on unmount can see the latest
   // list without making the effect depend on it and re-run constantly.
@@ -40,6 +50,21 @@ export default function App() {
 
   useEffect(() => {
     supportedFormats().then(setFormats).catch(() => setFormats(['jpeg', 'png']));
+  }, []);
+
+  // Name the tab after the job. Once tools are linkable and back works, the
+  // history is a list of these — and ten identical "darkroom" entries is not a
+  // history anyone can navigate.
+  useEffect(() => {
+    document.title = task ? `${task.label} — darkroom` : 'darkroom — image and PDF tools';
+  }, [task]);
+
+  // Back and forward move between the list and a tool, which is what those
+  // buttons are expected to do once each tool has its own address.
+  useEffect(() => {
+    const onHashChange = () => setChosen(taskFromHash(window.location.hash)?.id ?? null);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   useEffect(() => {
@@ -172,6 +197,30 @@ export default function App() {
   const pending = items.some((item) => item.status === 'queued');
   const anyDone = stats.done > 0;
 
+  // On "photos into a PDF", converting is a step on the way rather than the
+  // thing being asked for — so the emphasis moves to the button that actually
+  // finishes the job. Leaving Convert as the obvious action meant the obvious
+  // action produced images and no PDF.
+  const combining = chosen === 'to-pdf';
+
+  // Choosing a task seeds the controls with what that job implies. It does not
+  // lock anything: every control below stays editable, and a file of the other
+  // kind is still handled rather than turned away.
+  const choose = useCallback((id: TaskId) => {
+    setChosen(id);
+    const picked = findTask(id);
+    if (picked?.settings) setSettings(picked.settings);
+    // Pushed rather than replaced, so back returns to the list.
+    window.location.hash = hashForTask(id);
+  }, []);
+
+  const showAllTools = useCallback(() => {
+    setChosen(null);
+    // `location.hash = ''` leaves a bare "#" in the bar and does not fire a
+    // change event when the hash is already empty, so the entry is replaced.
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }, []);
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 py-10 sm:py-16">
       <header className="mb-10">
@@ -188,10 +237,29 @@ export default function App() {
         </p>
       </header>
 
+      {!task ? (
+        <main className="flex-1">
+          <h2 className="sr-only">What do you want to do?</h2>
+          <TaskPicker onChoose={choose} />
+        </main>
+      ) : (
       <main className="flex-1 space-y-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="text-lg font-medium">{task.label}</h2>
+          <button
+            type="button"
+            onClick={showAllTools}
+            className="cursor-pointer text-xs text-ink-faint underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink"
+          >
+            All tools
+          </button>
+        </div>
+
         <DropZone
           onFiles={addFiles}
           busy={busy}
+          accept={acceptAttribute(task)}
+          prompt={dropPrompt(task)}
           compact={items.length > 0 || pdfs.length > 0}
         />
 
@@ -211,7 +279,14 @@ export default function App() {
                 Clear
               </button>
             </div>
-            <PdfPanel entries={pdfs} onBusy={setBusy} />
+            <PdfPanel
+              // Remounted per task so switching tool reseeds the action rather
+              // than leaving the panel on whatever was picked last time.
+              key={chosen}
+              entries={pdfs}
+              onBusy={setBusy}
+              initialAction={task.action}
+            />
           </section>
         )}
 
@@ -248,7 +323,11 @@ export default function App() {
                 type="button"
                 onClick={run}
                 disabled={busy || items.length === 0}
-                className="tap inline-flex cursor-pointer items-center rounded-lg bg-amber px-6 font-semibold text-on-amber transition-colors hover:brightness-110 disabled:cursor-wait disabled:opacity-50"
+                className={`tap inline-flex cursor-pointer items-center rounded-lg transition-colors disabled:cursor-wait disabled:opacity-50 ${
+                  combining
+                    ? 'bg-raised px-5 text-sm text-ink hover:brightness-125'
+                    : 'bg-amber px-6 font-semibold text-on-amber hover:brightness-110'
+                }`}
               >
                 {busy ? 'Working…' : pending ? 'Convert' : 'Convert again'}
               </button>
@@ -278,10 +357,11 @@ export default function App() {
               )}
             </div>
 
-            <CombinePdf items={items} disabled={busy} onBusy={setBusy} />
+            <CombinePdf items={items} disabled={busy} onBusy={setBusy} primary={combining} />
           </>
         )}
       </main>
+      )}
 
       <footer className="mt-16 border-t border-line pt-6 text-xs text-ink-faint">
         <p className="max-w-lg text-pretty">

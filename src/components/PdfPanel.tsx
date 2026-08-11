@@ -16,9 +16,9 @@ export interface PdfEntry {
   info: PdfInfo;
 }
 
-type Task = 'merge' | 'pages' | 'rotate' | 'split' | 'images';
+import type { PdfAction } from '../lib/tasks';
 
-const TASKS: Array<{ id: Task; label: string; hint: string; needsMany?: boolean }> = [
+const TASKS: Array<{ id: PdfAction; label: string; hint: string; needsMany?: boolean }> = [
   { id: 'pages', label: 'Keep pages', hint: 'select, drop or reorder pages' },
   { id: 'rotate', label: 'Rotate', hint: 'turn selected pages' },
   { id: 'merge', label: 'Merge', hint: 'join every file into one', needsMany: true },
@@ -40,8 +40,17 @@ interface Output {
  * things depending on which. Choosing the task first makes the selection field
  * unambiguous.
  */
-export function PdfPanel({ entries, onBusy }: { entries: PdfEntry[]; onBusy: (busy: boolean) => void }) {
-  const [task, setTask] = useState<Task>('pages');
+export function PdfPanel({
+  entries,
+  onBusy,
+  initialAction = 'pages',
+}: {
+  entries: PdfEntry[];
+  onBusy: (busy: boolean) => void;
+  /** Where to start, from the task the user picked on the way in. */
+  initialAction?: PdfAction;
+}) {
+  const [task, setTask] = useState<PdfAction>(initialAction);
   const [selection, setSelection] = useState('');
   const [turn, setTurn] = useState(90);
   const [error, setError] = useState<string | null>(null);

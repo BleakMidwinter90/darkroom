@@ -114,6 +114,23 @@ await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
 
 check('page loads', (await page.locator('h1').innerText()).includes('darkroom'));
 
+/*
+ * The front door is a list of jobs, not a drop zone. That list is the only
+ * place the app says what it can do, so an empty or truncated one is a broken
+ * landing page rather than a cosmetic problem.
+ */
+const offered = await page.locator('main button').allInnerTexts();
+check('the landing page lists what the app does', offered.length >= 10, `${offered.length} tools`);
+check('it offers photo work', offered.some((text) => /remove location data/i.test(text)));
+check('it offers document work', offered.some((text) => /merge pdfs/i.test(text)));
+
+// There is no file input until a job is chosen — that is the point of the change.
+check('no upload prompt before choosing', (await page.locator('input[type=file]').count()) === 0);
+
+await page.getByRole('button', { name: /Make a photo smaller/ }).click();
+await page.waitForSelector('input[type=file]', { timeout: 10_000 });
+check('choosing a job opens the upload step', true);
+
 // Feed the file in through the real input the drop zone uses.
 await page.setInputFiles('input[type=file]', {
   name: 'IMG_4021.jpg',
@@ -123,6 +140,16 @@ await page.setInputFiles('input[type=file]', {
 
 await page.waitForSelector('button:has-text("Convert")', { timeout: 10_000 });
 check('file enters the queue', (await page.locator('li').count()) > 0);
+
+/*
+ * The job has to arrive configured, or the list is just a menu in front of the
+ * same drop zone. "Make a photo smaller" means a dimension cap and real
+ * compression — quality alone does not get a phone photo under a mail limit.
+ */
+const seeded = await page.locator('button[aria-pressed="true"]').allInnerTexts();
+check('the chosen job arrives configured', seeded.includes('Web'), seeded.join(', '));
+const seededQuality = await page.locator('.eyebrow:has-text("Quality")').innerText();
+check('and at a quality that actually shrinks', /\b70\b/.test(seededQuality), seededQuality.replace(/\n/g, ' '));
 
 // Resize to 800px and convert to WebP, so both paths are exercised at once.
 await page.getByRole('button', { name: 'Email', exact: true }).click();
@@ -215,6 +242,12 @@ for (let index = 1; index <= 3; index++) {
 const pdfBytes = Buffer.from(await sample.save());
 
 await page.locator('text=Clear').first().click().catch(() => {});
+
+// Back to the list, then into a document job.
+await page.getByRole('button', { name: 'All tools', exact: true }).click();
+await page.getByRole('button', { name: /Keep or reorder pages/ }).click();
+await page.waitForSelector('input[type=file]', { timeout: 10_000 });
+
 await page.setInputFiles('input[type=file]', {
   name: 'contract.pdf',
   mimeType: 'application/pdf',
@@ -269,6 +302,70 @@ check(
   rendererWorker ? rendererWorker.split('/').pop() : 'pdf.js fell back to the main thread',
 );
 
+/*
+ * "Photos into a PDF" has to finish the job without a detour.
+ *
+ * Converting first is a step on the way, not something to require: someone who
+ * picked this job and pressed the obvious button should get a PDF.
+ */
+const toPdf = await context.newPage();
+await toPdf.goto(`http://localhost:${PORT}/#to-pdf`, { waitUntil: 'networkidle' });
+await toPdf.setInputFiles('input[type=file]', {
+  name: 'receipt.jpg',
+  mimeType: 'image/jpeg',
+  buffer: withGps,
+});
+await toPdf.waitForSelector('button:has-text("Combine into PDF")', { timeout: 10_000 });
+
+const directPdf = toPdf.waitForEvent('download', { timeout: 30_000 });
+await toPdf.getByRole('button', { name: 'Combine into PDF', exact: true }).click();
+const straight = await directPdf.catch(() => null);
+
+if (straight) {
+  const stream = await straight.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const bytes = Buffer.concat(chunks);
+  check('photos become a PDF without converting first', bytes.subarray(0, 5).toString() === '%PDF-');
+  check(
+    'and that PDF carries no EXIF either',
+    !bytes.includes(Buffer.from('Exif', 'latin1')),
+  );
+} else {
+  check('photos become a PDF without converting first', false, 'no download appeared');
+}
+await toPdf.close();
+
+/*
+ * Addressable tools.
+ *
+ * A link to a tool has to open that tool, and back has to return to the list
+ * rather than leaving the app — which is what it did before each tool had an
+ * address.
+ */
+const linked = await context.newPage();
+await linked.goto(`http://localhost:${PORT}/#merge`, { waitUntil: 'networkidle' });
+check(
+  'a link opens the tool it names',
+  /merge pdfs/i.test(await linked.locator('main h2').first().innerText()),
+);
+
+await linked.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
+await linked.getByRole('button', { name: /Rotate pages/ }).click();
+await linked.goBack();
+await linked.waitForTimeout(300);
+check(
+  'back returns to the list',
+  (await linked.getByRole('button', { name: /Merge PDFs/ }).count()) > 0,
+);
+
+await linked.goto(`http://localhost:${PORT}/#no-such-tool`, { waitUntil: 'networkidle' });
+check(
+  'a stale link opens the list rather than breaking',
+  (await linked.getByRole('button', { name: /Merge PDFs/ }).count()) > 0,
+);
+await linked.close();
+
 check('no uncaught page errors', pageErrors.length === 0, pageErrors.join('; '));
 
 /*
@@ -297,7 +394,10 @@ if (registered) {
   const heading = await offlinePage.locator('h1').count();
   check('app still loads with the network cut', heading === 1);
 
-  // And it must still actually convert, not merely render.
+  // And it must still actually convert, not merely render — including the task
+  // list, which is the only route to the converter now.
+  await offlinePage.getByRole('button', { name: /Convert a photo/ }).click();
+  await offlinePage.waitForSelector('input[type=file]', { timeout: 10_000 });
   await offlinePage.setInputFiles('input[type=file]', {
     name: 'offline.jpg',
     mimeType: 'image/jpeg',

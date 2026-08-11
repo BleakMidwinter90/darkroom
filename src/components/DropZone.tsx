@@ -5,6 +5,10 @@ import { isAcceptedFile } from '../lib/naming';
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
   busy: boolean;
+  /** What to ask for, narrowed to the chosen task. */
+  accept: string;
+  /** The prompt, phrased in the terms of the job being done. */
+  prompt: string;
   /**
    * Shrink once there is a queue.
    *
@@ -21,7 +25,7 @@ interface DropZoneProps {
  * Clicking anywhere opens a file picker, because a drop zone that only accepts
  * drops excludes every phone. The whole surface is the button.
  */
-export function DropZone({ onFiles, busy, compact = false }: DropZoneProps) {
+export function DropZone({ onFiles, busy, accept: acceptTypes, prompt, compact = false }: DropZoneProps) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Drag events fire on every child element, so a boolean flickers as the
@@ -80,7 +84,7 @@ export function DropZone({ onFiles, busy, compact = false }: DropZoneProps) {
           [ + ]
         </span>
         <span className={compact ? 'text-sm text-ink-muted' : 'text-lg font-medium'}>
-          {dragging ? 'Drop them here' : compact ? 'Add more' : 'Choose photos, or drop them here'}
+          {dragging ? 'Drop them here' : compact ? 'Add more' : prompt}
         </span>
         {!compact && (
           <span className="max-w-sm text-sm text-ink-muted">
@@ -93,7 +97,7 @@ export function DropZone({ onFiles, busy, compact = false }: DropZoneProps) {
         ref={inputRef}
         type="file"
         multiple
-        accept="image/*,.heic,.heif,application/pdf,.pdf"
+        accept={acceptTypes}
         onChange={(event) => {
           accept(event.target.files);
           // Reset, or picking the same file twice in a row does nothing.

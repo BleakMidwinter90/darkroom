@@ -25,6 +25,12 @@ darkroom does the same work in the browser. There is no upload, no account, and 
 
 ## What it does
 
+It opens on a list of jobs rather than a file picker, because "choose photos, or drop them here" describes the mechanism and not the work — someone arriving with a twelve page statement and one page they need had no way to know that was even on offer.
+
+<img src="docs/screenshots/empty-desktop.png" alt="darkroom's front page, listing five photo jobs and five document jobs" width="720">
+
+Picking a job seeds the settings it implies — "make a photo smaller" arrives at a dimension cap and real compression, because quality alone does not get a modern phone photo under a mail limit. Nothing is locked afterwards: every control stays editable, and a file of the other kind is handled rather than turned away. Each tool has its own address, so `#merge` opens the merger and the back button returns to the list.
+
 **Converts HEIC.** The format every iPhone shoots in and half the web still cannot open. No browser decodes it natively, so darkroom loads a WebAssembly decoder — but only when you actually give it a HEIC file, so nobody pays 3 MB for a codec they don't need.
 
 **Shrinks things.** Quality slider, live before-and-after sizes, and an honest verdict on each file — including when a conversion made something *bigger*, which genuinely happens and which most tools quietly hide.
@@ -43,7 +49,7 @@ The one caveat: the HEIC decoder is a 3 MB WebAssembly chunk fetched on first us
 
 **Handles a whole batch.** Drop in a hundred, convert them four at a time so the tab survives it, and save the lot as a zip.
 
-**Reorganises PDFs too.** Drop a document instead of a photo and the app switches to it: keep or reorder pages, rotate a sideways scan, merge several files, split into one file per page, or render pages out as images. It strips the author name and title on the way out, the same way it strips EXIF from photos — Word and Acrobat write those into every export, and they travel with every copy.
+**Reorganises PDFs too.** Five of the ten jobs are document work: keep or reorder pages, rotate a sideways scan, merge several files, split into one file per page, or render pages out as images. It strips the author name and title on the way out, the same way it strips EXIF from photos — Word and Acrobat write those into every export, and they travel with every copy.
 
 <img src="docs/screenshots/pdf-desktop.png" alt="darkroom keeping pages 1-3, 7 and 10-12 of a twelve page statement" width="720">
 
@@ -75,7 +81,7 @@ The build output is a plain static bundle — `npm run build` produces a `dist/`
 
 ## How it works
 
-The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 119 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
+The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 140 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
 
 Two details worth knowing:
 
