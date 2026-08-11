@@ -267,12 +267,22 @@ export async function pdfToImages(
 ): Promise<RenderedPage[]> {
   const pdfjs = await import('pdfjs-dist');
 
-  // The worker has to be pointed at explicitly under a bundler, or pdf.js tries
-  // to fetch it from a path that does not exist in the build output.
+  /*
+   * Point pdf.js at its worker.
+   *
+   * Vite resolves this specifier at build time and emits the worker as its own
+   * hashed asset, so it stays out of the main bundle and is only fetched when
+   * someone actually renders a page.
+   *
+   * Worth knowing if this ever looks broken: when the worker cannot be loaded,
+   * pdf.js falls back to decoding on the main thread rather than failing. Output
+   * is still correct, so a test that only checks the pixels will pass either
+   * way — the thing to assert is that a dedicated worker was spawned.
+   */
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/build/pdf.worker.min.mjs',
     import.meta.url,
-  ).toString();
+  ).href;
 
   const bytes = await file.arrayBuffer();
   // Keep the loading task: it owns the worker, and `destroy` lives on it rather
