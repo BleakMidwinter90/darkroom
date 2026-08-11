@@ -25,6 +25,12 @@ darkroom does the same work in the browser. There is no upload, no account, and 
 
 ## What it does
 
+It opens on a list of jobs rather than a file picker, because "choose photos, or drop them here" describes the mechanism and not the work — someone arriving with a twelve page statement and one page they need had no way to know that was even on offer.
+
+<img src="docs/screenshots/empty-desktop.png" alt="darkroom's front page, listing five photo jobs and five document jobs" width="720">
+
+Picking a job seeds the settings it implies — "make a photo smaller" arrives at a dimension cap and real compression, because quality alone does not get a modern phone photo under a mail limit. Nothing is locked afterwards: every control stays editable, and a file of the other kind is handled rather than turned away. Each tool has its own address, so `#merge` opens the merger and the back button returns to the list.
+
 **Converts HEIC.** The format every iPhone shoots in and half the web still cannot open. No browser decodes it natively, so darkroom loads a WebAssembly decoder — but only when you actually give it a HEIC file, so nobody pays 3 MB for a codec they don't need.
 
 **Shrinks things.** Quality slider, live before-and-after sizes, and an honest verdict on each file — including when a conversion made something *bigger*, which genuinely happens and which most tools quietly hide.
