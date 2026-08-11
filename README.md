@@ -35,6 +35,8 @@ Picking a job seeds the settings it implies — "make a photo smaller" arrives a
 
 **Shrinks things.** Quality slider, live before-and-after sizes, and an honest verdict on each file — including when a conversion made something *bigger*, which genuinely happens and which most tools quietly hide.
 
+**Leaves the format alone when you ask it to.** Every output has to name a format, so "remove location data" used to send a PNG screenshot out as a JPEG — lossy, with transparency flattened, for a job that only strips metadata. *Keep format* is now the first option and the default for that job. HEIC falls back to JPEG because no browser can write HEIC, and GIF, BMP and TIFF go to PNG, where JPEG's ringing would be most obvious.
+
 **Resizes sensibly.** Presets named for what they are for (Email, Web, Full HD, 4K). Images already smaller than the target are left alone, because enlarging a photo only produces a blurrier, larger one.
 
 **Shows you what your photos are carrying, then removes it.** This is the part people don't expect.
@@ -81,7 +83,7 @@ The build output is a plain static bundle — `npm run build` produces a `dist/`
 
 ## How it works
 
-The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 140 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
+The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 157 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
 
 Two details worth knowing:
 
