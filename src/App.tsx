@@ -13,7 +13,14 @@ import { deduplicateNames } from './lib/naming';
 import { isPdf, readPdf } from './lib/pdf';
 import { processFile, supportedFormats } from './lib/pipeline';
 import { DEFAULT_SETTINGS, type Settings } from './lib/settings';
-import { acceptAttribute, dropPrompt, findTask, type TaskId } from './lib/tasks';
+import {
+  acceptAttribute,
+  dropPrompt,
+  findTask,
+  hashForTask,
+  taskFromHash,
+  type TaskId,
+} from './lib/tasks';
 import {
   CONCURRENCY,
   itemId,
@@ -29,7 +36,10 @@ export default function App() {
   const [formats, setFormats] = useState<OutputFormat[]>(['jpeg', 'png']);
   const [pdfs, setPdfs] = useState<PdfEntry[]>([]);
   const [busy, setBusy] = useState(false);
-  const [chosen, setChosen] = useState<TaskId | null>(null);
+  // Seeded from the URL so a link to a tool opens that tool.
+  const [chosen, setChosen] = useState<TaskId | null>(
+    () => taskFromHash(window.location.hash)?.id ?? null,
+  );
 
   const task = chosen ? findTask(chosen) : undefined;
 
@@ -40,6 +50,14 @@ export default function App() {
 
   useEffect(() => {
     supportedFormats().then(setFormats).catch(() => setFormats(['jpeg', 'png']));
+  }, []);
+
+  // Back and forward move between the list and a tool, which is what those
+  // buttons are expected to do once each tool has its own address.
+  useEffect(() => {
+    const onHashChange = () => setChosen(taskFromHash(window.location.hash)?.id ?? null);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   useEffect(() => {
@@ -179,6 +197,15 @@ export default function App() {
     setChosen(id);
     const picked = findTask(id);
     if (picked?.settings) setSettings(picked.settings);
+    // Pushed rather than replaced, so back returns to the list.
+    window.location.hash = hashForTask(id);
+  }, []);
+
+  const showAllTools = useCallback(() => {
+    setChosen(null);
+    // `location.hash = ''` leaves a bare "#" in the bar and does not fire a
+    // change event when the hash is already empty, so the entry is replaced.
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }, []);
 
   return (
@@ -208,7 +235,7 @@ export default function App() {
           <h2 className="text-lg font-medium">{task.label}</h2>
           <button
             type="button"
-            onClick={() => setChosen(null)}
+            onClick={showAllTools}
             className="cursor-pointer text-xs text-ink-faint underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink"
           >
             All tools
