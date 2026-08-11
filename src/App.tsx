@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { CombinePdf } from './components/CombinePdf';
 import { Controls, type Settings } from './components/Controls';
 import { DropZone } from './components/DropZone';
 import { FileRow } from './components/FileRow';
+import { PdfPanel, type PdfEntry } from './components/PdfPanel';
 import { formatBytes, plural } from './lib/format';
 import { readMetadata } from './lib/metadata';
 import type { OutputFormat } from './lib/naming';
 import { deduplicateNames } from './lib/naming';
+import { isPdf, readPdf } from './lib/pdf';
 import { processFile, supportedFormats } from './lib/pipeline';
 import {
   CONCURRENCY,
@@ -27,6 +30,7 @@ export default function App() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [formats, setFormats] = useState<OutputFormat[]>(['jpeg', 'png']);
+  const [pdfs, setPdfs] = useState<PdfEntry[]>([]);
   const [busy, setBusy] = useState(false);
 
   // Held in a ref as well as state so cleanup on unmount can see the latest
@@ -47,9 +51,27 @@ export default function App() {
   }, []);
 
   const addFiles = useCallback((files: File[]) => {
+    // Documents and images take different routes through the app, so they are
+    // separated at the door rather than by a mode switch the user has to find.
+    const documents = files.filter(isPdf);
+    const images = files.filter((file) => !isPdf(file));
+
+    if (documents.length > 0) {
+      void Promise.all(
+        documents.map(async (file) => ({ file, info: await readPdf(file) })),
+      )
+        .then((entries) => setPdfs((current) => [...current, ...entries]))
+        .catch(() => {
+          // A file that cannot be opened is reported by the panel when acted
+          // on; refusing to add it silently would be worse.
+        });
+    }
+
+    if (images.length === 0) return;
+
     setItems((current) => {
       const existing = new Set(current.map((item) => item.id));
-      const additions = files
+      const additions = images
         .map((file, index) => ({
           id: itemId(file, current.length + index),
           file,
@@ -63,6 +85,8 @@ export default function App() {
       return [...current, ...additions];
     });
   }, []);
+
+  const clearPdfs = useCallback(() => setPdfs([]), []);
 
   const removeItem = useCallback((id: string) => {
     setItems((current) => {
@@ -158,13 +182,38 @@ export default function App() {
           darkroom
         </h1>
         <p className="mt-3 max-w-lg text-pretty text-ink-muted">
-          Convert HEIC, shrink, resize, and strip location data from your photos. Everything runs
-          on this device — no upload, no account, no server that could keep a copy.
+          Convert HEIC, shrink and resize photos, reorganise PDFs, and strip the location data
+          and author names out of both. Everything runs on this device — no upload, no account,
+          no server that could keep a copy.
         </p>
       </header>
 
       <main className="flex-1 space-y-6">
-        <DropZone onFiles={addFiles} busy={busy} compact={items.length > 0} />
+        <DropZone
+          onFiles={addFiles}
+          busy={busy}
+          compact={items.length > 0 || pdfs.length > 0}
+        />
+
+        {pdfs.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="eyebrow">
+                {plural(pdfs.length, 'document')} ·{' '}
+                {pdfs.map((entry) => entry.file.name).join(', ')}
+              </h2>
+              <button
+                type="button"
+                onClick={clearPdfs}
+                disabled={busy}
+                className="cursor-pointer text-xs text-ink-faint underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink disabled:opacity-40"
+              >
+                Clear
+              </button>
+            </div>
+            <PdfPanel entries={pdfs} onBusy={setBusy} />
+          </section>
+        )}
 
         {items.length > 0 && (
           <>
@@ -228,6 +277,8 @@ export default function App() {
                 </p>
               )}
             </div>
+
+            <CombinePdf items={items} disabled={busy} onBusy={setBusy} />
           </>
         )}
       </main>

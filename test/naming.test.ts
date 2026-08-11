@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  isAcceptedFile,
   deduplicateNames,
   isHeic,
   isSupportedImage,
@@ -110,5 +111,23 @@ describe('isSupportedImage', () => {
   it('rejects things that are plainly not images', () => {
     expect(isSupportedImage({ name: 'notes.pdf', type: 'application/pdf' })).toBe(false);
     expect(isSupportedImage({ name: 'archive.zip', type: 'application/zip' })).toBe(false);
+  });
+});
+
+describe('isAcceptedFile', () => {
+  it('accepts PDFs, which isSupportedImage must not', () => {
+    const pdf = { name: 'contract.pdf', type: 'application/pdf' };
+    expect(isAcceptedFile(pdf)).toBe(true);
+    // Widening the image predicate to cover PDFs would make its name a lie and
+    // send documents down the canvas pipeline.
+    expect(isSupportedImage(pdf)).toBe(false);
+  });
+
+  it('still accepts images', () => {
+    expect(isAcceptedFile({ name: 'cat.heic', type: '' })).toBe(true);
+  });
+
+  it('still rejects everything else', () => {
+    expect(isAcceptedFile({ name: 'archive.zip', type: 'application/zip' })).toBe(false);
   });
 });

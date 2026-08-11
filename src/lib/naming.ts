@@ -79,3 +79,16 @@ export function isSupportedImage(file: { name: string; type: string }): boolean 
   if (/^image\//i.test(file.type)) return true;
   return /\.(jpe?g|png|webp|avif|gif|bmp|tiff?)$/i.test(file.name);
 }
+
+/**
+ * Anything the app will take at the door.
+ *
+ * Kept separate from `isSupportedImage` on purpose. A PDF is accepted by the
+ * app but is emphatically not an image, and widening the image predicate to
+ * include it would make its name a lie and quietly send documents down the
+ * canvas pipeline.
+ */
+export function isAcceptedFile(file: { name: string; type: string }): boolean {
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return true;
+  return isSupportedImage(file);
+}

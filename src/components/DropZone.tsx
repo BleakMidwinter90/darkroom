@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { isSupportedImage } from '../lib/naming';
+import { isAcceptedFile } from '../lib/naming';
 
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
@@ -31,7 +31,7 @@ export function DropZone({ onFiles, busy, compact = false }: DropZoneProps) {
   const accept = useCallback(
     (list: FileList | null) => {
       if (!list) return;
-      const files = Array.from(list).filter(isSupportedImage);
+      const files = Array.from(list).filter(isAcceptedFile);
       if (files.length > 0) onFiles(files);
     },
     [onFiles],
@@ -84,8 +84,7 @@ export function DropZone({ onFiles, busy, compact = false }: DropZoneProps) {
         </span>
         {!compact && (
           <span className="max-w-sm text-sm text-ink-muted">
-            HEIC, JPEG, PNG, WebP, AVIF. Nothing is uploaded — the conversion happens on this
-            device.
+            Images or PDFs. Nothing is uploaded — the work happens on this device.
           </span>
         )}
       </button>
@@ -94,7 +93,7 @@ export function DropZone({ onFiles, busy, compact = false }: DropZoneProps) {
         ref={inputRef}
         type="file"
         multiple
-        accept="image/*,.heic,.heif"
+        accept="image/*,.heic,.heif,application/pdf,.pdf"
         onChange={(event) => {
           accept(event.target.files);
           // Reset, or picking the same file twice in a row does nothing.
