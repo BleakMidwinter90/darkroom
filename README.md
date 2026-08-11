@@ -6,6 +6,8 @@
 
 Convert HEIC, shrink and resize photos, reorganise PDFs, and strip the location data and author names out of both — entirely in your browser.
 
+**[Use it →](https://bleakmidwinter90.github.io/darkroom/)**
+
 [![CI](https://github.com/BleakMidwinter90/darkroom/actions/workflows/ci.yml/badge.svg)](https://github.com/BleakMidwinter90/darkroom/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
 
@@ -62,6 +64,10 @@ Page selections are written the way you would say them — `1-3, 7, 10-` — and
 Two things it deliberately does not do. It will not **compress** a PDF: the library here manipulates structure and cannot recompress the embedded images that actually make a file large, so the button would mostly do nothing while implying otherwise — the honest route is PDF → images → PDF, offered as exactly that. And it will not **remove passwords**: stripping an owner password from a file you own is fine, but the same code path unlocks files you don't, and a browser tool is a poor place to draw that line.
 
 ## Try it
+
+It is live at **[bleakmidwinter90.github.io/darkroom](https://bleakmidwinter90.github.io/darkroom/)**. Install it from the browser menu and it works offline afterwards.
+
+To run it yourself:
 
 ```sh
 git clone https://github.com/BleakMidwinter90/darkroom.git
