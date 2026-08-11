@@ -81,9 +81,10 @@ export const TASKS: readonly Task[] = [
     label: 'Remove location data',
     blurb: 'Take the GPS, camera and timestamp out before sharing.',
     accepts: 'image',
-    // Barely any compression: the point is removing what the file carries, not
-    // changing the picture. Metadata goes because re-encoding cannot keep it.
-    settings: { format: 'jpeg', quality: 0.95, resize: { kind: 'none' } },
+    // Barely any compression, and the format left alone: the point is removing
+    // what the file carries, not changing the picture. Metadata goes because
+    // re-encoding cannot keep it, which is the one change that is unavoidable.
+    settings: { format: 'original', quality: 0.95, resize: { kind: 'none' } },
   },
   {
     id: 'to-pdf',
