@@ -303,6 +303,40 @@ check(
 );
 
 /*
+ * "Photos into a PDF" has to finish the job without a detour.
+ *
+ * Converting first is a step on the way, not something to require: someone who
+ * picked this job and pressed the obvious button should get a PDF.
+ */
+const toPdf = await context.newPage();
+await toPdf.goto(`http://localhost:${PORT}/#to-pdf`, { waitUntil: 'networkidle' });
+await toPdf.setInputFiles('input[type=file]', {
+  name: 'receipt.jpg',
+  mimeType: 'image/jpeg',
+  buffer: withGps,
+});
+await toPdf.waitForSelector('button:has-text("Combine into PDF")', { timeout: 10_000 });
+
+const directPdf = toPdf.waitForEvent('download', { timeout: 30_000 });
+await toPdf.getByRole('button', { name: 'Combine into PDF', exact: true }).click();
+const straight = await directPdf.catch(() => null);
+
+if (straight) {
+  const stream = await straight.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const bytes = Buffer.concat(chunks);
+  check('photos become a PDF without converting first', bytes.subarray(0, 5).toString() === '%PDF-');
+  check(
+    'and that PDF carries no EXIF either',
+    !bytes.includes(Buffer.from('Exif', 'latin1')),
+  );
+} else {
+  check('photos become a PDF without converting first', false, 'no download appeared');
+}
+await toPdf.close();
+
+/*
  * Addressable tools.
  *
  * A link to a tool has to open that tool, and back has to return to the list
