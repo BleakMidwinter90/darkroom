@@ -11,9 +11,16 @@
 
 import { targetSize, type ResizeMode, type Size } from './geometry';
 import { isHeic, MIME_TYPES, outputName, type OutputFormat } from './naming';
+import { resolveFormat, type FormatChoice } from './outputFormat';
 
 export interface ProcessOptions {
-  format: OutputFormat;
+  /** A format, or `original` to keep whatever the file already was. */
+  format: FormatChoice;
+  /**
+   * What this browser can actually write, used only when resolving `original`.
+   * Omitted means "assume the usual four", which is what the unit tests want.
+   */
+  supported?: readonly OutputFormat[];
   /** 0–1. Ignored by PNG, which is lossless. */
   quality: number;
   resize: ResizeMode;
@@ -96,10 +103,14 @@ export async function processFile(file: File, options: ProcessOptions): Promise<
   try {
     const original: Size = { width: bitmap.width, height: bitmap.height };
     const output = targetSize(original, options.resize);
-    const blob = await encode(bitmap, output, options.format, options.quality);
+
+    // Resolved here rather than at the controls, because `original` means
+    // something different for each file in a mixed batch.
+    const format = resolveFormat(file, options.format, options.supported);
+    const blob = await encode(bitmap, output, format, options.quality);
 
     return {
-      name: outputName(file.name, options.format),
+      name: outputName(file.name, format),
       blob,
       original,
       output,
