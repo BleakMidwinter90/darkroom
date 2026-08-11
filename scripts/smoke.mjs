@@ -565,6 +565,35 @@ if (registered) {
     .then(() => check('converts a photo while offline', true))
     .catch(() => check('converts a photo while offline', false));
 
+  /*
+   * And a PDF renders offline once its worker has been fetched.
+   *
+   * The renderer is a 1.3 MB worker fetched on first use rather than on
+   * install, exactly like the HEIC decoder — so the honest claim is not "PDFs
+   * work offline" but "they work offline after the first time". That is what
+   * the README says, so it is what gets checked.
+   */
+  const offlinePdf = await context.newPage();
+  await offlinePdf.goto(`http://localhost:${PORT}/#to-images`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await offlinePdf.setInputFiles('input[type=file]', {
+    name: 'offline.pdf',
+    mimeType: 'application/pdf',
+    buffer: pdfBytes,
+  });
+  await offlinePdf.waitForSelector('text=What do you want to do?', { timeout: 15_000 });
+  await offlinePdf.getByLabel('Page selection').fill('1');
+  await offlinePdf.getByRole('button', { name: 'Do it', exact: true }).click();
+  await offlinePdf
+    .waitForSelector('a[download$=".png"]', { timeout: 30_000 })
+    .then(() => check('renders a PDF page while offline', true))
+    .catch(async () => {
+      const shown = await offlinePdf.locator('.text-warn').last().innerText().catch(() => '');
+      check('renders a PDF page while offline', false, shown || 'no output');
+    });
+  await offlinePdf.close();
+
   await context.setOffline(false);
   await offlinePage.close();
 }
