@@ -314,6 +314,57 @@ check(
 );
 
 /*
+ * Merge order.
+ *
+ * The sources get distinct page widths so the order can be read back out of the
+ * result. A page count cannot do it: every possible order produces the same
+ * count, so counting pages would pass whatever the merge did with them.
+ */
+const ordering = await context.newPage();
+await ordering.goto(`http://localhost:${PORT}/#merge`, { waitUntil: 'networkidle' });
+
+const sized = async (width, pages) => {
+  const doc = await PDFDocument.create();
+  for (let page = 0; page < pages; page++) doc.addPage([width, 400]);
+  return Buffer.from(await doc.save());
+};
+
+await ordering.setInputFiles('input[type=file]', [
+  { name: 'first.pdf', mimeType: 'application/pdf', buffer: await sized(300, 1) },
+  { name: 'second.pdf', mimeType: 'application/pdf', buffer: await sized(310, 2) },
+  { name: 'third.pdf', mimeType: 'application/pdf', buffer: await sized(320, 3) },
+]);
+await ordering.waitForSelector('text=What do you want to do?', { timeout: 15_000 });
+
+const mergedWidths = async () => {
+  const bytes = await ordering.evaluate(async () => {
+    const href = document.querySelector('a[download$=".pdf"]')?.getAttribute('href');
+    if (!href) return null;
+    return Array.from(new Uint8Array(await (await fetch(href)).arrayBuffer()));
+  });
+  if (!bytes) return null;
+  const doc = await PDFDocument.load(Buffer.from(bytes));
+  return doc.getPages().map((page) => Math.round(page.getSize().width));
+};
+
+await ordering.getByRole('button', { name: 'Do it', exact: true }).click();
+await ordering.waitForSelector('a:has-text("Save")', { timeout: 20_000 });
+check(
+  'merging follows the order shown',
+  JSON.stringify(await mergedWidths()) === JSON.stringify([300, 310, 310, 320, 320, 320]),
+);
+
+await ordering.getByLabel('Move third.pdf earlier').click();
+await ordering.getByLabel('Move third.pdf earlier').click();
+await ordering.getByRole('button', { name: 'Do it', exact: true }).click();
+await ordering.waitForTimeout(1500);
+check(
+  'and moving a document changes the output',
+  JSON.stringify(await mergedWidths()) === JSON.stringify([320, 320, 320, 300, 310, 310]),
+);
+await ordering.close();
+
+/*
  * Merging needs two files, and used to pretend otherwise.
  *
  * With one document the Merge button was hidden, leaving nothing selected and a
