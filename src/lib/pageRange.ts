@@ -11,7 +11,11 @@
  */
 
 export interface RangeResult {
-  /** 1-indexed page numbers, sorted, with duplicates removed. */
+  /**
+   * 1-indexed page numbers, in the order they were asked for, with duplicates
+   * removed. The order is meaningful: `3,1` produces a document whose first
+   * page is page 3.
+   */
   pages: number[];
   /** Why the input could not be used, if it could not. */
   error?: string;
@@ -87,7 +91,16 @@ export function parsePageRange(input: string, total: number): RangeResult {
 
   if (pages.size === 0) return { pages: [], error: 'No pages selected.' };
 
-  return { pages: [...pages].sort((a, b) => a - b) };
+  /*
+   * Deliberately not sorted.
+   *
+   * "Keep pages" is advertised as reordering as well as selecting, and
+   * `extractPages` has always honoured the order it is given — but sorting here
+   * threw that information away before it ever got there, so entering `3,1`
+   * quietly produced pages 1 and 3 in the original order. A Set preserves
+   * insertion order, so duplicates keep their first position.
+   */
+  return { pages: [...pages] };
 }
 
 /**
@@ -109,13 +122,17 @@ export function invertSelection(pages: readonly number[], total: number): number
 export function describeSelection(pages: readonly number[]): string {
   if (pages.length === 0) return 'nothing';
 
-  const sorted = [...new Set(pages)].sort((a, b) => a - b);
+  // Runs are collapsed in the order given rather than sorted first, so a
+  // reordered selection is described as what it is: `3,1` reads "3, 1", not
+  // "1, 3". Telling someone their selection is something other than what they
+  // typed is how the reordering bug stayed invisible.
+  const unique = [...new Set(pages)];
   const parts: string[] = [];
 
-  let start = sorted[0];
-  let previous = sorted[0];
+  let start = unique[0];
+  let previous = unique[0];
 
-  for (const page of sorted.slice(1)) {
+  for (const page of unique.slice(1)) {
     if (page === previous + 1) {
       previous = page;
       continue;

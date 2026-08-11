@@ -33,8 +33,19 @@ describe('parsePageRange', () => {
     expect(parsePageRange('  ALL  ', 3).pages).toEqual([1, 2, 3]);
   });
 
-  it('sorts and deduplicates', () => {
-    expect(parsePageRange('5,1,5,2-3,1', 10).pages).toEqual([1, 2, 3, 5]);
+  it('deduplicates while keeping the first position of each page', () => {
+    expect(parsePageRange('5,1,5,2-3,1', 10).pages).toEqual([5, 1, 2, 3]);
+  });
+
+  it('keeps the order asked for, because the order is the feature', () => {
+    // "Keep pages" is advertised as reordering as well as selecting, and
+    // extractPages honours the order it is given. Sorting here threw that away.
+    expect(parsePageRange('3,1', 3).pages).toEqual([3, 1]);
+    expect(parsePageRange('2,1,3', 3).pages).toEqual([2, 1, 3]);
+  });
+
+  it('expands a range in ascending order within the position it was given', () => {
+    expect(parsePageRange('7,1-3', 10).pages).toEqual([7, 1, 2, 3]);
   });
 });
 
@@ -110,8 +121,15 @@ describe('describeSelection', () => {
     expect(describeSelection([])).toBe('nothing');
   });
 
-  it('sorts and deduplicates before describing', () => {
-    expect(describeSelection([3, 1, 2, 3])).toBe('1-3');
+  it('deduplicates, keeping the first position', () => {
+    expect(describeSelection([3, 1, 2, 3])).toBe('3, 1-2');
+  });
+
+  it('describes a reordered selection as what it actually is', () => {
+    // Rewriting "3, 1" to "1, 3" on screen is how the reordering bug stayed
+    // invisible: the app told people their selection was something else.
+    expect(describeSelection([3, 1])).toBe('3, 1');
+    expect(describeSelection([7, 1, 2, 3])).toBe('7, 1-3');
   });
 
   it('round-trips through the parser', () => {
