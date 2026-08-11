@@ -25,10 +25,13 @@ export function CombinePdf({
   items,
   disabled,
   onBusy,
+  primary = false,
 }: {
   items: QueueItem[];
   disabled: boolean;
   onBusy: (busy: boolean) => void;
+  /** True when this is the job the user actually came to do. */
+  primary?: boolean;
 }) {
   const [fit, setFit] = useState<Fit>('a4');
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +77,54 @@ export function CombinePdf({
     } finally {
       onBusy(false);
     }
+  }
+
+  // Selected options and the action both read as solid amber, which is fine
+  // while this is a secondary button and muddy once it is the primary one. When
+  // it is the job being done, the choice gets its own labelled row instead.
+  if (primary) {
+    return (
+      <div className="panel divide-y divide-line">
+        <fieldset className="p-5">
+          <legend className="eyebrow mb-3">Page size</legend>
+          <div className="flex flex-wrap gap-1.5">
+            {FITS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setFit(option.id)}
+                aria-pressed={fit === option.id}
+                title={option.hint}
+                className={`tap cursor-pointer rounded-lg px-4 text-sm transition-colors ${
+                  fit === option.id
+                    ? 'bg-amber text-on-amber font-semibold'
+                    : 'bg-raised text-ink-muted hover:text-ink'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2.5 text-xs text-ink-faint">
+            {fit === 'a4'
+              ? 'Centred on a printable page, which is what a form or receipt usually wants.'
+              : 'One page exactly the size of each photo, with no border.'}
+          </p>
+        </fieldset>
+
+        <div className="flex flex-wrap items-center gap-3 p-5">
+          <button
+            type="button"
+            onClick={combine}
+            disabled={disabled || items.length === 0}
+            className="tap inline-flex cursor-pointer items-center rounded-lg bg-amber px-6 font-semibold text-on-amber transition-colors hover:brightness-110 disabled:opacity-40"
+          >
+            Combine into PDF
+          </button>
+          {error && <p className="text-sm text-warn">{error}</p>}
+        </div>
+      </div>
+    );
   }
 
   return (

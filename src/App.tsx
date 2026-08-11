@@ -190,6 +190,12 @@ export default function App() {
   const pending = items.some((item) => item.status === 'queued');
   const anyDone = stats.done > 0;
 
+  // On "photos into a PDF", converting is a step on the way rather than the
+  // thing being asked for — so the emphasis moves to the button that actually
+  // finishes the job. Leaving Convert as the obvious action meant the obvious
+  // action produced images and no PDF.
+  const combining = chosen === 'to-pdf';
+
   // Choosing a task seeds the controls with what that job implies. It does not
   // lock anything: every control below stays editable, and a file of the other
   // kind is still handled rather than turned away.
@@ -310,7 +316,11 @@ export default function App() {
                 type="button"
                 onClick={run}
                 disabled={busy || items.length === 0}
-                className="tap inline-flex cursor-pointer items-center rounded-lg bg-amber px-6 font-semibold text-on-amber transition-colors hover:brightness-110 disabled:cursor-wait disabled:opacity-50"
+                className={`tap inline-flex cursor-pointer items-center rounded-lg transition-colors disabled:cursor-wait disabled:opacity-50 ${
+                  combining
+                    ? 'bg-raised px-5 text-sm text-ink hover:brightness-125'
+                    : 'bg-amber px-6 font-semibold text-on-amber hover:brightness-110'
+                }`}
               >
                 {busy ? 'Working…' : pending ? 'Convert' : 'Convert again'}
               </button>
@@ -340,7 +350,7 @@ export default function App() {
               )}
             </div>
 
-            <CombinePdf items={items} disabled={busy} onBusy={setBusy} />
+            <CombinePdf items={items} disabled={busy} onBusy={setBusy} primary={combining} />
           </>
         )}
       </main>
