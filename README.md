@@ -2,9 +2,9 @@
 
 # ◐ darkroom
 
-**Image tools that never leave your device.**
+**Image and PDF tools that never leave your device.**
 
-Convert HEIC, shrink, resize, and strip location data from your photos — entirely in your browser.
+Convert HEIC, shrink and resize photos, reorganise PDFs, and strip the location data and author names out of both — entirely in your browser.
 
 [![CI](https://github.com/BleakMidwinter90/darkroom/actions/workflows/ci.yml/badge.svg)](https://github.com/BleakMidwinter90/darkroom/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
@@ -43,6 +43,12 @@ The one caveat: the HEIC decoder is a 3 MB WebAssembly chunk fetched on first us
 
 **Handles a whole batch.** Drop in a hundred, convert them four at a time so the tab survives it, and save the lot as a zip.
 
+**Reorganises PDFs too.** Drop a document instead of a photo and the app switches to it: keep or reorder pages, rotate a sideways scan, merge several files, split into one file per page, or render pages out as images. It strips the author name and title on the way out, the same way it strips EXIF from photos — Word and Acrobat write those into every export, and they travel with every copy.
+
+**Turns images into a PDF, and back.** Photos of receipts, forms and passports are why most people go looking for an images-to-PDF site. Combine them onto A4 pages or at their own size. The PDF is built from the *converted* copies, so the location data does not simply move house — a PDF embeds JPEG bytes verbatim, EXIF block included, and nothing on screen would show it.
+
+Two things it deliberately does not do. It will not **compress** a PDF: the library here manipulates structure and cannot recompress the embedded images that actually make a file large, so the button would mostly do nothing while implying otherwise — the honest route is PDF → images → PDF, offered as exactly that. And it will not **remove passwords**: stripping an owner password from a file you own is fine, but the same code path unlocks files you don't, and a browser tool is a poor place to draw that line.
+
 ## Try it
 
 ```sh
@@ -52,7 +58,7 @@ npm install
 npm run dev
 ```
 
-The build output is a plain static bundle — `npm run build` produces a `dist/` you can host anywhere, or open from a file. There is no backend to deploy because there is no backend.
+The build output is a plain static bundle — `npm run build` produces a `dist/` you can host anywhere. There is no backend to deploy because there is no backend. Serve it over HTTP rather than opening `index.html` directly: the offline support and the PDF renderer both use workers, which browsers refuse to load from `file://`. `node scripts/serve.mjs` does that, including on your local network.
 
 | Command | What it does |
 | --- | --- |
@@ -60,11 +66,12 @@ The build output is a plain static bundle — `npm run build` produces a `dist/`
 | `npm run build` | Static production build |
 | `npm test` | Unit tests |
 | `npm run typecheck` | TypeScript, no emit |
-| `npm run smoke` | End-to-end test in a real browser |
+| `npm run lint` | Lint |
+| `npm run smoke` | Builds, then tests it end to end in a real browser |
 
 ## How it works
 
-The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 72 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
+The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 119 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
 
 Two details worth knowing:
 
@@ -81,7 +88,7 @@ Format availability is detected at runtime by encoding a real pixel and inspecti
 Issues and pull requests welcome. Anything in `src/lib/` needs tests; anything touching the pipeline should keep the smoke test green.
 
 ```sh
-npm test && npx eslint . && npm run typecheck && npm run build && npm run smoke
+npm test && npm run lint && npm run typecheck && npm run smoke
 ```
 
 ## License
