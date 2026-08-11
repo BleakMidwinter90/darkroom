@@ -302,6 +302,36 @@ check(
   rendererWorker ? rendererWorker.split('/').pop() : 'pdf.js fell back to the main thread',
 );
 
+/*
+ * Addressable tools.
+ *
+ * A link to a tool has to open that tool, and back has to return to the list
+ * rather than leaving the app — which is what it did before each tool had an
+ * address.
+ */
+const linked = await context.newPage();
+await linked.goto(`http://localhost:${PORT}/#merge`, { waitUntil: 'networkidle' });
+check(
+  'a link opens the tool it names',
+  /merge pdfs/i.test(await linked.locator('main h2').first().innerText()),
+);
+
+await linked.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
+await linked.getByRole('button', { name: /Rotate pages/ }).click();
+await linked.goBack();
+await linked.waitForTimeout(300);
+check(
+  'back returns to the list',
+  (await linked.getByRole('button', { name: /Merge PDFs/ }).count()) > 0,
+);
+
+await linked.goto(`http://localhost:${PORT}/#no-such-tool`, { waitUntil: 'networkidle' });
+check(
+  'a stale link opens the list rather than breaking',
+  (await linked.getByRole('button', { name: /Merge PDFs/ }).count()) > 0,
+);
+await linked.close();
+
 check('no uncaught page errors', pageErrors.length === 0, pageErrors.join('; '));
 
 /*
