@@ -399,8 +399,29 @@ check(
 
 await ordering.getByLabel('Move third.pdf earlier').click();
 await ordering.getByLabel('Move third.pdf earlier').click();
+
+/*
+ * Wait for the href to change rather than sleeping.
+ *
+ * A fixed delay here was a real flake: running the merge clears the outputs and
+ * builds a new blob, so a slow CI runner could be read either mid-gap with no
+ * link at all, or early enough to still see the previous merged.pdf — failing a
+ * check on an app that was behaving correctly.
+ */
+const previousHref = await ordering
+  .locator('a[download$=".pdf"]')
+  .first()
+  .getAttribute('href');
+
 await ordering.getByRole('button', { name: 'Do it', exact: true }).click();
-await ordering.waitForTimeout(1500);
+await ordering.waitForFunction(
+  (stale) => {
+    const href = document.querySelector('a[download$=".pdf"]')?.getAttribute('href');
+    return Boolean(href) && href !== stale;
+  },
+  previousHref,
+  { timeout: 20_000 },
+);
 check(
   'and moving a document changes the output',
   JSON.stringify(await mergedWidths()) === JSON.stringify([320, 320, 320, 300, 310, 310]),
