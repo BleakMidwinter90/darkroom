@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CombinePdf } from './components/CombinePdf';
 import { Controls } from './components/Controls';
+import { DocumentList } from './components/DocumentList';
 import { DropZone } from './components/DropZone';
 import { FileRow } from './components/FileRow';
 import { PdfPanel, type PdfEntry } from './components/PdfPanel';
@@ -10,6 +11,7 @@ import { formatBytes, plural } from './lib/format';
 import { readMetadata } from './lib/metadata';
 import type { OutputFormat } from './lib/naming';
 import { deduplicateNames } from './lib/naming';
+import { moveItem } from './lib/order';
 import { isPdf, readPdf } from './lib/pdf';
 import { processFile, supportedFormats } from './lib/pipeline';
 import { DEFAULT_SETTINGS, type Settings } from './lib/settings';
@@ -112,6 +114,14 @@ export default function App() {
   }, []);
 
   const clearPdfs = useCallback(() => setPdfs([]), []);
+
+  const movePdf = useCallback((from: number, to: number) => {
+    setPdfs((current) => moveItem(current, from, to));
+  }, []);
+
+  const removePdf = useCallback((index: number) => {
+    setPdfs((current) => current.filter((_, position) => position !== index));
+  }, []);
 
   const removeItem = useCallback((id: string) => {
     setItems((current) => {
@@ -266,10 +276,7 @@ export default function App() {
         {pdfs.length > 0 && (
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="eyebrow">
-                {plural(pdfs.length, 'document')} ·{' '}
-                {pdfs.map((entry) => entry.file.name).join(', ')}
-              </h2>
+              <h2 className="eyebrow">{plural(pdfs.length, 'document')}</h2>
               <button
                 type="button"
                 onClick={clearPdfs}
@@ -279,6 +286,12 @@ export default function App() {
                 Clear
               </button>
             </div>
+            <DocumentList
+              entries={pdfs}
+              disabled={busy}
+              onMove={movePdf}
+              onRemove={removePdf}
+            />
             <PdfPanel
               // Remounted per task so switching tool reseeds the action rather
               // than leaving the panel on whatever was picked last time.
