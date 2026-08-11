@@ -37,6 +37,10 @@ darkroom does the same work in the browser. There is no upload, no account, and 
 
 A photo taken at home holds the coordinates of the house, to about four metres. Most people have never been told that. darkroom reads the metadata out of the original, shows you exactly what was in there, and writes a copy with none of it.
 
+**Works with the network off.** It installs to a home screen and runs offline, which is also the easiest way to satisfy yourself that the privacy claim is true — cut the wifi and convert a photo anyway. The CI suite does exactly that on every push.
+
+The one caveat: the HEIC decoder is a 3 MB WebAssembly chunk fetched on first use, so your *first* HEIC conversion needs a connection. Every one after that doesn't.
+
 **Handles a whole batch.** Drop in a hundred, convert them four at a time so the tab survives it, and save the lot as a zip.
 
 ## Try it
