@@ -77,7 +77,10 @@ const check = (label, condition, detail = '') => {
 };
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+// An explicit context, so the offline checks below can open a second page in
+// it. `browser.newPage()` creates an implicit context that refuses more pages.
+const context = await browser.newContext({ viewport: { width: 1100, height: 900 } });
+const page = await context.newPage();
 
 const pageErrors = [];
 page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -140,6 +143,48 @@ if (fullBytes) {
 }
 
 check('no uncaught page errors', pageErrors.length === 0, pageErrors.join('; '));
+
+/*
+ * Offline.
+ *
+ * The headline claim is that nothing is uploaded. The strongest way to
+ * demonstrate that is for the whole app to keep working with the network
+ * physically cut, so it is worth proving rather than asserting.
+ *
+ * localhost counts as a secure context, so the worker registers here exactly
+ * as it would over HTTPS.
+ */
+const registered = await page.evaluate(async () => {
+  const registration = await navigator.serviceWorker.ready.catch(() => null);
+  return Boolean(registration?.active);
+});
+check('service worker takes control', registered);
+
+if (registered) {
+  await context.setOffline(true);
+
+  const offlinePage = await context.newPage();
+  await offlinePage.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
+  await offlinePage.waitForTimeout(1200);
+
+  const heading = await offlinePage.locator('h1').count();
+  check('app still loads with the network cut', heading === 1);
+
+  // And it must still actually convert, not merely render.
+  await offlinePage.setInputFiles('input[type=file]', {
+    name: 'offline.jpg',
+    mimeType: 'image/jpeg',
+    buffer: withGps,
+  });
+  await offlinePage.getByRole('button', { name: /^Convert$/ }).click();
+  await offlinePage
+    .waitForSelector('a:has-text("Save")', { timeout: 20_000 })
+    .then(() => check('converts a photo while offline', true))
+    .catch(() => check('converts a photo while offline', false));
+
+  await context.setOffline(false);
+  await offlinePage.close();
+}
 
 await browser.close();
 server.close();
