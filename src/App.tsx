@@ -39,6 +39,7 @@ export default function App() {
   const [pdfs, setPdfs] = useState<PdfEntry[]>([]);
   const [busy, setBusy] = useState(false);
   // Seeded from the URL so a link to a tool opens that tool.
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<TaskId | null>(
     () => taskFromHash(window.location.hash)?.id ?? null,
   );
@@ -100,14 +101,35 @@ export default function App() {
     const images = files.filter((file) => !isPdf(file));
 
     if (documents.length > 0) {
-      void Promise.all(
+      setPdfError(null);
+
+      /*
+       * `allSettled`, not `all`.
+       *
+       * One unreadable document — a real password, or a damaged file — used to
+       * reject the whole batch, and the catch then dropped every other document
+       * from the same drop along with it. Nothing appeared and nothing was said,
+       * so the files simply vanished.
+       */
+      void Promise.allSettled(
         documents.map(async (file) => ({ file, info: await readPdf(file) })),
-      )
-        .then((entries) => setPdfs((current) => [...current, ...entries]))
-        .catch(() => {
-          // A file that cannot be opened is reported by the panel when acted
-          // on; refusing to add it silently would be worse.
-        });
+      ).then((results) => {
+        const opened = results.flatMap((result) =>
+          result.status === 'fulfilled' ? [result.value] : [],
+        );
+        const refused = documents.filter((_, index) => results[index].status === 'rejected');
+
+        if (opened.length > 0) setPdfs((current) => [...current, ...opened]);
+
+        if (refused.length > 0) {
+          const names = refused.map((file) => file.name).join(', ');
+          setPdfError(
+            `${names} could not be opened — ${
+              refused.length === 1 ? 'it needs' : 'they need'
+            } a password, or the file is damaged.`,
+          );
+        }
+      });
     }
 
     if (images.length === 0) return;
@@ -129,7 +151,10 @@ export default function App() {
     });
   }, []);
 
-  const clearPdfs = useCallback(() => setPdfs([]), []);
+  const clearPdfs = useCallback(() => {
+    setPdfs([]);
+    setPdfError(null);
+  }, []);
 
   const movePdf = useCallback((from: number, to: number) => {
     setPdfs((current) => moveItem(current, from, to));
@@ -166,7 +191,13 @@ export default function App() {
       const metadata = await readMetadata(item.file);
 
       try {
-        const result = await processFile(item.file, settings);
+        // The detected encoder list has to travel with the request. "Keep the
+        // original format" is resolved per file, and without this the resolver
+        // assumes every format is writable — so on a browser that can decode
+        // but not encode WebP or AVIF, the canvas is asked for a format it
+        // cannot produce and quietly hands back a PNG wearing a .webp or .avif
+        // extension.
+        const result = await processFile(item.file, { ...settings, supported: formats });
         const downloadUrl = URL.createObjectURL(result.blob);
 
         setItems((current) =>
@@ -196,7 +227,7 @@ export default function App() {
     });
 
     setBusy(false);
-  }, [settings]);
+  }, [settings, formats]);
 
   const downloadAll = useCallback(async () => {
     const finished = itemsRef.current.filter((item) => item.status === 'done' && item.result);
@@ -283,6 +314,11 @@ export default function App() {
           prompt={dropPrompt(task)}
           compact={items.length > 0 || pdfs.length > 0}
         />
+
+        {/* Outside the documents section on purpose: when every file in a drop
+            fails there is no section to put it in, and that is exactly the case
+            where saying nothing looks like the files were swallowed. */}
+        {pdfError && <p className="text-sm text-warn">{pdfError}</p>}
 
         {pdfs.length > 0 && (
           <section className="space-y-3">
