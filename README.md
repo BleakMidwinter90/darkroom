@@ -81,7 +81,7 @@ The build output is a plain static bundle — `npm run build` produces a `dist/`
 
 ## How it works
 
-The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 119 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
+The arithmetic — resize geometry, output naming, byte formatting, queue concurrency — lives in [`src/lib/`](src/lib/) as pure functions with no DOM, covered by 140 unit tests. Everything that touches a canvas or a codec is isolated in [`pipeline.ts`](src/lib/pipeline.ts).
 
 Two details worth knowing:
 
