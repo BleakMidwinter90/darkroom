@@ -115,6 +115,17 @@ await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
 check('page loads', (await page.locator('h1').innerText()).includes('darkroom'));
 
 /*
+ * Link previews live in the built HTML, so nothing at runtime notices when they
+ * go missing — and a project nobody can see when it is shared is one nobody
+ * opens. The image is checked for a real URL rather than merely being present.
+ */
+const shell = await readFile(join(DIST, 'index.html'), 'utf8');
+check('the page describes itself for link previews', /property="og:title"/.test(shell));
+const ogImage = shell.match(/property="og:image"\s+content="([^"]+)"/)?.[1] ?? '';
+check('and points at a real preview image', /^https?:\/\/\S+\.(png|jpe?g)$/.test(ogImage), ogImage);
+check('the static title mentions both halves', /image and PDF/.test(shell));
+
+/*
  * The front door is a list of jobs, not a drop zone. That list is the only
  * place the app says what it can do, so an empty or truncated one is a broken
  * landing page rather than a cosmetic problem.
