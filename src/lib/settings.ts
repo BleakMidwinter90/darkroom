@@ -1,5 +1,5 @@
 import type { ResizeMode } from './geometry';
-import type { OutputFormat } from './naming';
+import type { FormatChoice } from './outputFormat';
 
 /**
  * What the image side is configured to produce.
@@ -9,7 +9,7 @@ import type { OutputFormat } from './naming';
  * `lib/` importing from a component is not.
  */
 export interface Settings {
-  format: OutputFormat;
+  format: FormatChoice;
   quality: number;
   resize: ResizeMode;
 }
