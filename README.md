@@ -49,7 +49,7 @@ The one caveat: the HEIC decoder is a 3 MB WebAssembly chunk fetched on first us
 
 **Handles a whole batch.** Drop in a hundred, convert them four at a time so the tab survives it, and save the lot as a zip.
 
-**Reorganises PDFs too.** Drop a document instead of a photo and the app switches to it: keep or reorder pages, rotate a sideways scan, merge several files, split into one file per page, or render pages out as images. It strips the author name and title on the way out, the same way it strips EXIF from photos — Word and Acrobat write those into every export, and they travel with every copy.
+**Reorganises PDFs too.** Five of the ten jobs are document work: keep or reorder pages, rotate a sideways scan, merge several files, split into one file per page, or render pages out as images. It strips the author name and title on the way out, the same way it strips EXIF from photos — Word and Acrobat write those into every export, and they travel with every copy.
 
 <img src="docs/screenshots/pdf-desktop.png" alt="darkroom keeping pages 1-3, 7 and 10-12 of a twelve page statement" width="720">
 
