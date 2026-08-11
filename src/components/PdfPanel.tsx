@@ -18,10 +18,10 @@ export interface PdfEntry {
 
 import type { PdfAction } from '../lib/tasks';
 
-const TASKS: Array<{ id: PdfAction; label: string; hint: string; needsMany?: boolean }> = [
+const TASKS: Array<{ id: PdfAction; label: string; hint: string }> = [
   { id: 'pages', label: 'Keep pages', hint: 'select, drop or reorder pages' },
   { id: 'rotate', label: 'Rotate', hint: 'turn selected pages' },
-  { id: 'merge', label: 'Merge', hint: 'join every file into one', needsMany: true },
+  { id: 'merge', label: 'Merge', hint: 'join every file into one' },
   { id: 'split', label: 'Split', hint: 'one file per page' },
   { id: 'images', label: 'To images', hint: 'render pages as PNG or JPEG' },
 ];
@@ -67,7 +67,15 @@ export function PdfPanel({
   );
 
   const needsSelection = task === 'pages' || task === 'rotate' || task === 'images';
-  const disabled = entries.length === 0 || (needsSelection && Boolean(parsed.error));
+
+  // Merging one file with itself is not a thing anyone wants, and it used to be
+  // possible: the button was hidden below two documents, which left the panel
+  // with nothing selected and a "Do it" that quietly produced a copy called
+  // merged.pdf. Say what is missing instead of hiding the action that was asked
+  // for.
+  const needsAnother = task === 'merge' && entries.length < 2;
+  const disabled =
+    entries.length === 0 || needsAnother || (needsSelection && Boolean(parsed.error));
 
   function release() {
     for (const output of outputs) URL.revokeObjectURL(output.url);
@@ -129,7 +137,7 @@ export function PdfPanel({
       <fieldset className="p-5">
         <legend className="eyebrow mb-3">What do you want to do?</legend>
         <div className="flex flex-wrap gap-1.5">
-          {TASKS.filter((entry) => !entry.needsMany || entries.length > 1).map((entry) => {
+          {TASKS.map((entry) => {
             const active = task === entry.id;
             return (
               <button
@@ -206,6 +214,11 @@ export function PdfPanel({
         >
           Do it
         </button>
+        {needsAnother && (
+          <p className="text-sm text-ink-muted">
+            Add another PDF to merge — there is only one here.
+          </p>
+        )}
         {error && <p className="text-sm text-warn">{error}</p>}
       </div>
 
