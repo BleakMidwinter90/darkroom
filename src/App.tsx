@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CombinePdf } from './components/CombinePdf';
-import { Controls, type Settings } from './components/Controls';
+import { Controls } from './components/Controls';
 import { DropZone } from './components/DropZone';
 import { FileRow } from './components/FileRow';
 import { PdfPanel, type PdfEntry } from './components/PdfPanel';
+import { TaskPicker } from './components/TaskPicker';
 import { formatBytes, plural } from './lib/format';
 import { readMetadata } from './lib/metadata';
 import type { OutputFormat } from './lib/naming';
 import { deduplicateNames } from './lib/naming';
 import { isPdf, readPdf } from './lib/pdf';
 import { processFile, supportedFormats } from './lib/pipeline';
+import { DEFAULT_SETTINGS, type Settings } from './lib/settings';
+import { acceptAttribute, dropPrompt, findTask, type TaskId } from './lib/tasks';
 import {
   CONCURRENCY,
   itemId,
@@ -20,18 +23,15 @@ import {
   type QueueItem,
 } from './lib/queue';
 
-const DEFAULT_SETTINGS: Settings = {
-  format: 'jpeg',
-  quality: 0.8,
-  resize: { kind: 'none' },
-};
-
 export default function App() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [formats, setFormats] = useState<OutputFormat[]>(['jpeg', 'png']);
   const [pdfs, setPdfs] = useState<PdfEntry[]>([]);
   const [busy, setBusy] = useState(false);
+  const [chosen, setChosen] = useState<TaskId | null>(null);
+
+  const task = chosen ? findTask(chosen) : undefined;
 
   // Held in a ref as well as state so cleanup on unmount can see the latest
   // list without making the effect depend on it and re-run constantly.
@@ -172,6 +172,15 @@ export default function App() {
   const pending = items.some((item) => item.status === 'queued');
   const anyDone = stats.done > 0;
 
+  // Choosing a task seeds the controls with what that job implies. It does not
+  // lock anything: every control below stays editable, and a file of the other
+  // kind is still handled rather than turned away.
+  const choose = useCallback((id: TaskId) => {
+    setChosen(id);
+    const picked = findTask(id);
+    if (picked?.settings) setSettings(picked.settings);
+  }, []);
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 py-10 sm:py-16">
       <header className="mb-10">
@@ -188,10 +197,29 @@ export default function App() {
         </p>
       </header>
 
+      {!task ? (
+        <main className="flex-1">
+          <h2 className="sr-only">What do you want to do?</h2>
+          <TaskPicker onChoose={choose} />
+        </main>
+      ) : (
       <main className="flex-1 space-y-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="text-lg font-medium">{task.label}</h2>
+          <button
+            type="button"
+            onClick={() => setChosen(null)}
+            className="cursor-pointer text-xs text-ink-faint underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink"
+          >
+            All tools
+          </button>
+        </div>
+
         <DropZone
           onFiles={addFiles}
           busy={busy}
+          accept={acceptAttribute(task)}
+          prompt={dropPrompt(task)}
           compact={items.length > 0 || pdfs.length > 0}
         />
 
@@ -211,7 +239,14 @@ export default function App() {
                 Clear
               </button>
             </div>
-            <PdfPanel entries={pdfs} onBusy={setBusy} />
+            <PdfPanel
+              // Remounted per task so switching tool reseeds the action rather
+              // than leaving the panel on whatever was picked last time.
+              key={chosen}
+              entries={pdfs}
+              onBusy={setBusy}
+              initialAction={task.action}
+            />
           </section>
         )}
 
@@ -282,6 +317,7 @@ export default function App() {
           </>
         )}
       </main>
+      )}
 
       <footer className="mt-16 border-t border-line pt-6 text-xs text-ink-faint">
         <p className="max-w-lg text-pretty">
