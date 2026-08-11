@@ -9,6 +9,29 @@
       name="description"
       content="Convert HEIC, shrink and resize photos, reorganise PDFs, and strip location data and author names out of both. Runs entirely in your browser: nothing is uploaded."
     />
+
+    <!--
+      Link previews. A project nobody can see when it is shared is a project
+      nobody opens, and the front page is the clearest statement of what this is
+      — so the preview shows the tool list itself.
+
+      The image is an absolute URL because previews are fetched by a crawler
+      with no page context, and it points at the repository so it resolves
+      wherever the app happens to be hosted.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="darkroom — image and PDF tools that never leave your device" />
+    <meta
+      property="og:description"
+      content="Convert HEIC, shrink and resize photos, reorganise PDFs, and strip location data and author names out of both. No upload, no account, no server that could keep a copy."
+    />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/BleakMidwinter90/darkroom/main/docs/screenshots/empty-desktop.png"
+    />
+    <meta property="og:image:alt" content="darkroom's front page, listing five photo jobs and five document jobs" />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
