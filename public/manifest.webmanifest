@@ -1,16 +1,57 @@
 {
-  "name": "darkroom — image tools that never leave your device",
+  "name": "darkroom — image and PDF tools that never leave your device",
   "short_name": "darkroom",
-  "description": "Convert HEIC, compress, resize and strip location data from photos, entirely in your browser.",
+  "description": "Convert HEIC, compress and resize photos, reorganise PDFs, and strip location data and author names — entirely in your browser.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0c0b0a",
   "theme_color": "#0c0b0a",
-  "categories": ["photo", "utilities", "productivity"],
+  "categories": [
+    "photo",
+    "utilities",
+    "productivity"
+  ],
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Make a photo smaller",
+      "short_name": "Shrink",
+      "url": "./#shrink"
+    },
+    {
+      "name": "Remove location data",
+      "short_name": "Strip GPS",
+      "url": "./#strip"
+    },
+    {
+      "name": "Merge PDFs",
+      "short_name": "Merge",
+      "url": "./#merge"
+    },
+    {
+      "name": "Keep or reorder pages",
+      "short_name": "Pages",
+      "url": "./#pages"
+    }
   ]
 }
