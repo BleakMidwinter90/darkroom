@@ -45,6 +45,10 @@ The one caveat: the HEIC decoder is a 3 MB WebAssembly chunk fetched on first us
 
 **Reorganises PDFs too.** Drop a document instead of a photo and the app switches to it: keep or reorder pages, rotate a sideways scan, merge several files, split into one file per page, or render pages out as images. It strips the author name and title on the way out, the same way it strips EXIF from photos — Word and Acrobat write those into every export, and they travel with every copy.
 
+<img src="docs/screenshots/pdf-desktop.png" alt="darkroom keeping pages 1-3, 7 and 10-12 of a twelve page statement" width="720">
+
+Page selections are written the way you would say them — `1-3, 7, 10-` — and an out-of-range page is refused rather than quietly clamped, because silently handing back a document you did not ask for is worse than saying no.
+
 **Turns images into a PDF, and back.** Photos of receipts, forms and passports are why most people go looking for an images-to-PDF site. Combine them onto A4 pages or at their own size. The PDF is built from the *converted* copies, so the location data does not simply move house — a PDF embeds JPEG bytes verbatim, EXIF block included, and nothing on screen would show it.
 
 Two things it deliberately does not do. It will not **compress** a PDF: the library here manipulates structure and cannot recompress the embedded images that actually make a file large, so the button would mostly do nothing while implying otherwise — the honest route is PDF → images → PDF, offered as exactly that. And it will not **remove passwords**: stripping an owner password from a file you own is fine, but the same code path unlocks files you don't, and a browser tool is a poor place to draw that line.
