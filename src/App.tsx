@@ -52,6 +52,13 @@ export default function App() {
     supportedFormats().then(setFormats).catch(() => setFormats(['jpeg', 'png']));
   }, []);
 
+  // Name the tab after the job. Once tools are linkable and back works, the
+  // history is a list of these — and ten identical "darkroom" entries is not a
+  // history anyone can navigate.
+  useEffect(() => {
+    document.title = task ? `${task.label} — darkroom` : 'darkroom — image and PDF tools';
+  }, [task]);
+
   // Back and forward move between the list and a tool, which is what those
   // buttons are expected to do once each tool has its own address.
   useEffect(() => {
