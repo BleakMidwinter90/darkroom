@@ -1,11 +1,9 @@
 import type { ResizeMode } from '../lib/geometry';
 import type { OutputFormat } from '../lib/naming';
+import type { FormatChoice } from '../lib/outputFormat';
+import type { Settings } from '../lib/settings';
 
-export interface Settings {
-  format: OutputFormat;
-  quality: number;
-  resize: ResizeMode;
-}
+export type { Settings };
 
 interface ControlsProps {
   settings: Settings;
@@ -14,7 +12,8 @@ interface ControlsProps {
   disabled: boolean;
 }
 
-const FORMAT_LABELS: Record<OutputFormat, string> = {
+const FORMAT_LABELS: Record<FormatChoice, string> = {
+  original: 'Keep format',
   jpeg: 'JPEG',
   png: 'PNG',
   webp: 'WebP',
@@ -37,6 +36,9 @@ function sameMode(a: ResizeMode, b: ResizeMode): boolean {
 }
 
 export function Controls({ settings, formats, onChange, disabled }: ControlsProps) {
+  // Offered first, because for several jobs — stripping metadata above all —
+  // changing the format is a side effect nobody asked for.
+  const choices: FormatChoice[] = ['original', ...formats];
   const losslessFormat = settings.format === 'png';
 
   return (
@@ -44,7 +46,7 @@ export function Controls({ settings, formats, onChange, disabled }: ControlsProp
       <fieldset className="p-5" disabled={disabled}>
         <legend className="eyebrow mb-3">Convert to</legend>
         <div className="flex flex-wrap gap-1.5">
-          {formats.map((format) => {
+          {choices.map((format) => {
             const active = settings.format === format;
             return (
               <button
