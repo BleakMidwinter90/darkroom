@@ -314,6 +314,36 @@ check(
 );
 
 /*
+ * Merging needs two files, and used to pretend otherwise.
+ *
+ * With one document the Merge button was hidden, leaving nothing selected and a
+ * "Do it" that produced a single-file copy called merged.pdf.
+ */
+const one = await context.newPage();
+await one.goto(`http://localhost:${PORT}/#merge`, { waitUntil: 'networkidle' });
+await one.setInputFiles('input[type=file]', {
+  name: 'only.pdf',
+  mimeType: 'application/pdf',
+  buffer: pdfBytes,
+});
+await one.waitForSelector('text=What do you want to do?', { timeout: 15_000 });
+
+check(
+  'the job you chose is still the one selected',
+  (await one.getByRole('button', { name: 'Merge', exact: true }).getAttribute('aria-pressed')) ===
+    'true',
+);
+check(
+  'merging one file is refused, not silently done',
+  await one.getByRole('button', { name: 'Do it', exact: true }).isDisabled(),
+);
+check(
+  'and it says why',
+  /add another pdf/i.test(await one.locator('.panel').last().innerText()),
+);
+await one.close();
+
+/*
  * "Photos into a PDF" has to finish the job without a detour.
  *
  * Converting first is a step on the way, not something to require: someone who
