@@ -1,0 +1,139 @@
+@import 'tailwindcss';
+
+/**
+ * darkroom's visual identity.
+ *
+ * The name is the brief. A darkroom is dark so the print is the only bright
+ * thing in it, and it is lit by an amber safelight — the one wavelength that
+ * will not fog the paper. So: a near-black ground, images as the only source of
+ * colour, and amber for anything the interface needs to say.
+ *
+ * That accent is earned rather than picked. It is also, usefully, a colour
+ * almost nothing else uses, which does more for recognisability than any
+ * amount of logo.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Ground — warm-shifted blacks, never a blue-grey */
+  --base: #0c0b0a;
+  --surface: #151312;
+  --raised: #1e1b19;
+  --sunk: #090807;
+
+  /* Light */
+  --ink: #f2ede6;
+  --ink-muted: #9c948a;
+  --ink-faint: #6b645c;
+
+  /* Structure */
+  --line: #262220;
+  --line-strong: #38322e;
+
+  /* Safelight */
+  --amber: #e8933a;
+  --amber-bright: #f5a94e;
+  --amber-dim: #7a4f1c;
+  --amber-wash: #1f1509;
+  --on-amber: #1a1004;
+
+  /* Outcomes: green for a real saving, rust for a file that grew */
+  --good: #7fbe6a;
+  --warn: #c96a4a;
+}
+
+@theme inline {
+  --color-base: var(--base);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunk: var(--sunk);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-amber: var(--amber);
+  --color-amber-dim: var(--amber-dim);
+  --color-amber-wash: var(--amber-wash);
+  --color-on-amber: var(--on-amber);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--base);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/**
+ * Technical readouts — dimensions, byte counts, percentages.
+ *
+ * Monospace and tabular so a column of numbers stays a column as it changes,
+ * which matters when twenty rows update at once during a batch.
+ */
+@utility readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+@utility panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+@utility eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+@utility tap {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+:where(button, a):focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: var(--amber-dim);
+  color: var(--ink);
+}
+
+/* A slow amber sweep, used only while a batch is actually working. */
+@keyframes develop {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
