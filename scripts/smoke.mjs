@@ -314,6 +314,49 @@ check(
 );
 
 /*
+ * Arriving by link, rather than by clicking the list.
+ *
+ * Seeding used to happen on the click, so every other route in — a link, a
+ * bookmark, an app shortcut, the back button — got the previous job's settings.
+ * The check above missed it precisely because it clicks the button.
+ *
+ * "Remove location data" is the one that matters: it must keep the format, or a
+ * PNG screenshot comes back as a JPEG for a job that only strips metadata.
+ */
+const linkedIn = await context.newPage();
+await linkedIn.goto(`http://localhost:${PORT}/#strip`, { waitUntil: 'networkidle' });
+const transparent = await sharp({
+  create: { width: 240, height: 180, channels: 4, background: { r: 200, g: 60, b: 40, alpha: 0.5 } },
+})
+  .png()
+  .toBuffer();
+await linkedIn.setInputFiles('input[type=file]', {
+  name: 'shot.png',
+  mimeType: 'image/png',
+  buffer: transparent,
+});
+await linkedIn.waitForSelector('button:has-text("Convert")', { timeout: 10_000 });
+
+const linkedSeed = await linkedIn.locator('button[aria-pressed="true"]').allInnerTexts();
+check('a linked job arrives configured too', linkedSeed.includes('Keep format'), linkedSeed.join(', '));
+
+await linkedIn.getByRole('button', { name: /^Convert$/ }).click();
+await linkedIn.waitForSelector('a:has-text("Save")', { timeout: 20_000 });
+const strippedName = await linkedIn.locator('a[download]').first().getAttribute('download');
+check('a PNG stays a PNG', strippedName?.endsWith('.png') === true, strippedName ?? '');
+
+const strippedBytes = Buffer.from(
+  await linkedIn.evaluate(async () => {
+    const href = document.querySelector('a[download]')?.getAttribute('href');
+    return Array.from(new Uint8Array(await (await fetch(href)).arrayBuffer()));
+  }),
+);
+const strippedMeta = await sharp(strippedBytes).metadata();
+check('with its transparency intact', strippedMeta.hasAlpha === true);
+check('and no metadata', !strippedMeta.exif);
+await linkedIn.close();
+
+/*
  * Merge order.
  *
  * The sources get distinct page widths so the order can be read back out of the
