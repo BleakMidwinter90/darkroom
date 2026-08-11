@@ -54,6 +54,22 @@ export default function App() {
     supportedFormats().then(setFormats).catch(() => setFormats(['jpeg', 'png']));
   }, []);
 
+  /*
+   * Seed the controls with what the job implies.
+   *
+   * Keyed on the job rather than done when the button is clicked, because a
+   * tool can be arrived at without ever touching the list — a link, a bookmark,
+   * an app shortcut, or the back button. Seeding on click meant "remove location
+   * data" opened on JPEG for everyone who followed a link to it, quietly
+   * re-encoding PNGs for a job that is only supposed to strip metadata.
+   *
+   * It does not lock anything: this runs when the job changes, so every control
+   * stays editable afterwards.
+   */
+  useEffect(() => {
+    if (task?.settings) setSettings(task.settings);
+  }, [task]);
+
   // Name the tab after the job. Once tools are linkable and back works, the
   // history is a list of these — and ten identical "darkroom" entries is not a
   // history anyone can navigate.
@@ -213,13 +229,8 @@ export default function App() {
   // action produced images and no PDF.
   const combining = chosen === 'to-pdf';
 
-  // Choosing a task seeds the controls with what that job implies. It does not
-  // lock anything: every control below stays editable, and a file of the other
-  // kind is still handled rather than turned away.
   const choose = useCallback((id: TaskId) => {
     setChosen(id);
-    const picked = findTask(id);
-    if (picked?.settings) setSettings(picked.settings);
     // Pushed rather than replaced, so back returns to the list.
     window.location.hash = hashForTask(id);
   }, []);
